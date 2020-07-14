@@ -5,15 +5,9 @@ using UnityEngine;
 using KSP.UI.Screens;
 
 /* 
-KAT: Kerbal Auto Trigger
--- condition --
-et/ou
--- general --
-button action color
-github
 save window position
 profil multi + import export
-vessel switch ?
+breaking ground
 */
 
 namespace KspTrigger

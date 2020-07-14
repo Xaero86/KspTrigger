@@ -16,7 +16,7 @@ namespace KspTrigger
         private const float LEFT_MARGING = 20.0f;
         private const float RIGHT_MARGING = 20.0f;
         
-        private readonly Vector2 _windowSize = new Vector2(530, 230);
+        private readonly Vector2 _windowSize = new Vector2(530, 260);
         
         private Rect _windowRect = Rect.zero;
         private Rect _listRect = Rect.zero;
@@ -43,7 +43,7 @@ namespace KspTrigger
             _windowRect = new Rect(pos, _windowSize);
             _listRect = new Rect(0, 0, LEFT_PANEL_WIDTH, _windowSize.y);
             _mainRect = new Rect(LEFT_PANEL_WIDTH, 0, _windowSize.x-LEFT_PANEL_WIDTH, _windowSize.y);
-            _popupUI = new PopupUI(Utils.CONDION_WINDOW_ID_POP);
+            _popupUI = new PopupUI(Utils.CONDITION_WINDOW_ID_POP);
             _partSelector = new PartSelector(this.SelectPart);
         }
         
@@ -72,8 +72,8 @@ namespace KspTrigger
                 Rect lastRect = GUILayoutUtility.GetLastRect();
                 _listRect.y = lastRect.y;
                 _mainRect.y = lastRect.y;
-                _listRect.height = _windowSize.y - lastRect.y - rctOff.vertical;
-                _mainRect.height = _windowSize.y - 2*lastRect.y - 2*rctOff.vertical;
+                _listRect.height = _windowSize.y - 3*lastRect.y - 3*rctOff.vertical;
+                _mainRect.height = _windowSize.y - 3*lastRect.y - 3*rctOff.vertical;
             }
 
             DisplayLeftPanel();
@@ -84,6 +84,12 @@ namespace KspTrigger
             }
             
             GUILayout.FlexibleSpace();
+            // Condition combination
+            GUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            _conditions.Combination = (ConditionCombination) _popupUI.GUILayoutPopup("CondCombination", Enum.GetNames(typeof(ConditionCombination)), (int) _conditions.Combination);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
             // OK / CANCEL
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();

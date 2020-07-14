@@ -98,6 +98,59 @@ namespace KspTrigger
             _actions.RemoveAt(index);
         }
         
+        private const string KEY_NB_ACTIONS     = "nbActions";
+        private const string KEY_PREF_ACTION    = "action";
+        
+        public void OnLoad(ConfigNode node, VesselTriggers triggerConfig)
+        {
+            bool dataFound = false;
+            ConfigNode childNode = null;
+            int nbItem = 0;
+            TriggerActionType actionType = (TriggerActionType) (-1);
+            
+            dataFound = node.TryGetValue(KEY_NB_ACTIONS, ref nbItem);
+            if (dataFound)
+            {
+                for (int i = 0; i < nbItem; i++)
+                {
+                    TriggerAction action = null;
+                    dataFound = node.TryGetNode(KEY_PREF_ACTION + i, ref childNode);
+                    if (dataFound)
+                    {
+                        dataFound = childNode.TryGetEnum<TriggerActionType>("type", ref actionType, (TriggerActionType) (-1));
+                        if (dataFound)
+                        {
+                            switch (actionType)
+                            {
+                                case TriggerActionType.Part:
+                                    action = new TriggerActionPart(triggerConfig);
+                                    break;
+                                case TriggerActionType.Flight:
+                                    action = new TriggerActionFlight(triggerConfig);
+                                    break;
+                                case TriggerActionType.Message:
+                                    action = new TriggerActionMessage(triggerConfig);
+                                    break;
+                                case TriggerActionType.Timer:
+                                    action = new TriggerActionTimer(triggerConfig);
+                                    break;
+                                default:
+                                    break;
+                            }
+                            if (action != null)
+                            {
+                                dataFound = ConfigNode.LoadObjectFromConfig(action, childNode);
+                                if (dataFound)
+                                {
+                                    _actions.Add(action);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
         public void LoadPersistentData()
         {
             foreach (TriggerAction action in _actions)
@@ -107,6 +160,22 @@ namespace KspTrigger
                     action.LoadPersistentData();
                 }
             }
+        }
+        
+        public void OnSave(ConfigNode node)
+        {
+            ConfigNode childNode = null;
+            int i = 0;
+            foreach (TriggerAction action in _actions)
+            {
+                childNode = ConfigNode.CreateConfigFromObject(action);
+                if (childNode != null)
+                {
+                    node.SetNode(KEY_PREF_ACTION + i, childNode, true);
+                    i++;
+                }
+            }
+            node.SetValue(KEY_NB_ACTIONS, i, true);
         }
         
         public void UpdatePersistentData()
@@ -122,6 +191,10 @@ namespace KspTrigger
         
         public bool IsValid()
         {
+            if (_actions.Count == 0)
+            {
+                return false;
+            }
             bool result = true;
             foreach (TriggerAction action in _actions)
             {

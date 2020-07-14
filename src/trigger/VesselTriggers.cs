@@ -249,19 +249,15 @@ namespace KspTrigger
         }
         
         private const string KEY_EVENT          = "event";
-        private const string KEY_NB_CONDITIONS  = "nbConditions";
-        private const string KEY_PREF_CONDITION = "condition";
-        private const string KEY_NB_ACTIONS     = "nbActions";
-        private const string KEY_PREF_ACTION    = "action";
+        private const string KEY_ACTIONS        = "actions";
+        private const string KEY_CONDITIONS     = "conditions";
         
         public void OnLoad(ConfigNode node, VesselTriggers triggerConfig)
         {
             bool dataFound = false;
             ConfigNode childNode = null;
-            int nbItem = 0;
             TriggerEventType eventType = (TriggerEventType) (-1);
-            TriggerConditionType conditionType = (TriggerConditionType) (-1);
-            TriggerActionType actionType = (TriggerActionType) (-1);
+            
             // Event
             dataFound = node.TryGetNode(KEY_EVENT, ref childNode);
             if (dataFound)
@@ -277,85 +273,20 @@ namespace KspTrigger
                 }
             }
             // Condition
-            dataFound = node.TryGetValue(KEY_NB_CONDITIONS, ref nbItem);
+            dataFound = node.TryGetNode(KEY_CONDITIONS, ref childNode);
             if (dataFound)
             {
-                for (int i = 0; i < nbItem; i++)
-                {
-                    TriggerCondition condition = null;
-                    dataFound = node.TryGetNode(KEY_PREF_CONDITION + i, ref childNode);
-                    if (dataFound)
-                    {
-                        dataFound = childNode.TryGetEnum<TriggerConditionType>("type", ref conditionType, (TriggerConditionType) (-1));
-                        if (dataFound)
-                        {
-                            switch (conditionType)
-                            {
-                                case TriggerConditionType.Part:
-                                    condition = new TriggerConditionPart(triggerConfig);
-                                    break;
-                                case TriggerConditionType.Flight:
-                                    condition = new TriggerConditionFlight(triggerConfig);
-                                    break;
-                                case TriggerConditionType.Timer:
-                                    condition = new TriggerConditionTimer(triggerConfig);
-                                    break;
-                                default:
-                                    break;
-                            }
-                            if (condition != null)
-                            {
-                                dataFound = ConfigNode.LoadObjectFromConfig(condition, childNode);
-                                if (dataFound)
-                                {
-                                    _conditions.Add(condition);
-                                }
-                            }
-                        }
-                    }
-                }
+                _conditions = new TriggerConditions();
+                ConfigNode.LoadObjectFromConfig(_conditions, childNode);
+                _conditions.OnLoad(childNode, triggerConfig);
             }
             // Actions
-            dataFound = node.TryGetValue(KEY_NB_ACTIONS, ref nbItem);
+            dataFound = node.TryGetNode(KEY_ACTIONS, ref childNode);
             if (dataFound)
             {
-                for (int i = 0; i < nbItem; i++)
-                {
-                    TriggerAction action = null;
-                    dataFound = node.TryGetNode(KEY_PREF_ACTION + i, ref childNode);
-                    if (dataFound)
-                    {
-                        dataFound = childNode.TryGetEnum<TriggerActionType>("type", ref actionType, (TriggerActionType) (-1));
-                        if (dataFound)
-                        {
-                            switch (actionType)
-                            {
-                                case TriggerActionType.Part:
-                                    action = new TriggerActionPart(triggerConfig);
-                                    break;
-                                case TriggerActionType.Flight:
-                                    action = new TriggerActionFlight(triggerConfig);
-                                    break;
-                                case TriggerActionType.Message:
-                                    action = new TriggerActionMessage(triggerConfig);
-                                    break;
-                                case TriggerActionType.Timer:
-                                    action = new TriggerActionTimer(triggerConfig);
-                                    break;
-                                default:
-                                    break;
-                            }
-                            if (action != null)
-                            {
-                                dataFound = ConfigNode.LoadObjectFromConfig(action, childNode);
-                                if (dataFound)
-                                {
-                                    _actions.Add(action);
-                                }
-                            }
-                        }
-                    }
-                }
+                _actions = new TriggerActions();
+                ConfigNode.LoadObjectFromConfig(_actions, childNode);
+                _actions.OnLoad(childNode, triggerConfig);
             }
         }
         
@@ -385,29 +316,19 @@ namespace KspTrigger
                 }
             }
             // Condition
-            int i = 0;
-            foreach (TriggerCondition condition in _conditions.Conditions)
+            childNode = ConfigNode.CreateConfigFromObject(_conditions);
+            if (childNode != null)
             {
-                childNode = ConfigNode.CreateConfigFromObject(condition);
-                if (childNode != null)
-                {
-                    node.SetNode(KEY_PREF_CONDITION + i, childNode, true);
-                    i++;
-                }
+                _conditions.OnSave(childNode);
+                node.SetNode(KEY_CONDITIONS, childNode, true);
             }
-            node.SetValue(KEY_NB_CONDITIONS, i, true);
             // Actions
-            i = 0;
-            foreach (TriggerAction action in _actions.Actions)
+            childNode = ConfigNode.CreateConfigFromObject(_actions);
+            if (childNode != null)
             {
-                childNode = ConfigNode.CreateConfigFromObject(action);
-                if (childNode != null)
-                {
-                    node.SetNode(KEY_PREF_ACTION + i, childNode, true);
-                    i++;
-                }
+                _actions.OnSave(childNode);
+                node.SetNode(KEY_ACTIONS, childNode, true);
             }
-            node.SetValue(KEY_NB_ACTIONS, i, true);
         }
     }
 }

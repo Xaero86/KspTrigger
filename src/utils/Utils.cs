@@ -22,15 +22,15 @@ namespace KspTrigger
         private static GUIStyle _TF_STYLE_INVALID = null;
         public static GUIStyle TF_STYLE_INVALID { get {return _TF_STYLE_INVALID;} }
         
-        public const int MAIN_WINDOW_ID        = 36541;
-        public const int EVENT_WINDOW_ID       = MAIN_WINDOW_ID + 1;
-        public const int CONDITION_WINDOW_ID   = MAIN_WINDOW_ID + 2;
-        public const int ACTION_WINDOW_ID      = MAIN_WINDOW_ID + 3;
-        public const int TIMER_CONF_WINDOW_ID  = MAIN_WINDOW_ID + 4;
-        public const int TIMER_DISP_WINDOW_ID  = MAIN_WINDOW_ID + 5;
-        public const int EVENT_WINDOW_ID_POP   = EVENT_WINDOW_ID + 20;
-        public const int CONDION_WINDOW_ID_POP = CONDITION_WINDOW_ID + 20;
-        public const int ACTION_WINDOW_ID_POP  = ACTION_WINDOW_ID + 20;
+        public const int MAIN_WINDOW_ID          = 36541;
+        public const int EVENT_WINDOW_ID         = MAIN_WINDOW_ID + 1;
+        public const int CONDITION_WINDOW_ID     = MAIN_WINDOW_ID + 2;
+        public const int ACTION_WINDOW_ID        = MAIN_WINDOW_ID + 3;
+        public const int TIMER_CONF_WINDOW_ID    = MAIN_WINDOW_ID + 4;
+        public const int TIMER_DISP_WINDOW_ID    = MAIN_WINDOW_ID + 5;
+        public const int EVENT_WINDOW_ID_POP     = EVENT_WINDOW_ID + 20;
+        public const int CONDITION_WINDOW_ID_POP = CONDITION_WINDOW_ID + 20;
+        public const int ACTION_WINDOW_ID_POP    = ACTION_WINDOW_ID + 20;
         
         public static void InitGui()
         {

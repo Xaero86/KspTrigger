@@ -10,6 +10,12 @@ namespace KspTrigger
         Timer
     }
     
+    public enum ConditionCombination
+    {
+        Every,
+        AtLeastOne
+    }
+    
     public abstract class TriggerCondition
     {
         protected VesselTriggers _vesselTriggers = null;
@@ -47,10 +53,13 @@ namespace KspTrigger
     {
         private List<TriggerCondition> _conditions;
         public List<TriggerCondition> Conditions { get { return _conditions; } }
+        [Persistent(name="combination")]
+        public ConditionCombination Combination;
         
         public TriggerConditions()
         {
             _conditions = new List<TriggerCondition>();
+            Combination = ConditionCombination.Every;
         }
         
         public TriggerConditions(TriggerConditions other)
@@ -75,6 +84,7 @@ namespace KspTrigger
                     _conditions.Add(new TriggerConditionTimer((TriggerConditionTimer) condition));
                 }
             }
+            Combination = other.Combination;
         }
         
         public TriggerCondition this[int i]
@@ -95,6 +105,56 @@ namespace KspTrigger
             _conditions.RemoveAt(index);
         }
         
+        private const string KEY_NB_CONDITIONS  = "nbConditions";
+        private const string KEY_PREF_CONDITION = "condition";
+        
+        public void OnLoad(ConfigNode node, VesselTriggers triggerConfig)
+        {
+            bool dataFound = false;
+            ConfigNode childNode = null;
+            int nbItem = 0;
+            TriggerConditionType conditionType = (TriggerConditionType) (-1);
+            
+            dataFound = node.TryGetValue(KEY_NB_CONDITIONS, ref nbItem);
+            if (dataFound)
+            {
+                for (int i = 0; i < nbItem; i++)
+                {
+                    TriggerCondition condition = null;
+                    dataFound = node.TryGetNode(KEY_PREF_CONDITION + i, ref childNode);
+                    if (dataFound)
+                    {
+                        dataFound = childNode.TryGetEnum<TriggerConditionType>("type", ref conditionType, (TriggerConditionType) (-1));
+                        if (dataFound)
+                        {
+                            switch (conditionType)
+                            {
+                                case TriggerConditionType.Part:
+                                    condition = new TriggerConditionPart(triggerConfig);
+                                    break;
+                                case TriggerConditionType.Flight:
+                                    condition = new TriggerConditionFlight(triggerConfig);
+                                    break;
+                                case TriggerConditionType.Timer:
+                                    condition = new TriggerConditionTimer(triggerConfig);
+                                    break;
+                                default:
+                                    break;
+                            }
+                            if (condition != null)
+                            {
+                                dataFound = ConfigNode.LoadObjectFromConfig(condition, childNode);
+                                if (dataFound)
+                                {
+                                    _conditions.Add(condition);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+                
         public void LoadPersistentData()
         {
             foreach (TriggerCondition condition in _conditions)
@@ -104,6 +164,22 @@ namespace KspTrigger
                     condition.LoadPersistentData();
                 }
             }
+        }
+        
+        public void OnSave(ConfigNode node)
+        {
+            ConfigNode childNode = null;
+            int i = 0;
+            foreach (TriggerCondition condition in _conditions)
+            {
+                childNode = ConfigNode.CreateConfigFromObject(condition);
+                if (childNode != null)
+                {
+                    node.SetNode(KEY_PREF_CONDITION + i, childNode, true);
+                    i++;
+                }
+            }
+            node.SetValue(KEY_NB_CONDITIONS, i, true);
         }
         
         public void UpdatePersistentData()
@@ -123,16 +199,20 @@ namespace KspTrigger
             {
                 return true;
             }
-            // TODO all true / one true
-            bool result = true;
+            bool allTrue = true;
             foreach (TriggerCondition condition in _conditions)
             {
                 if (condition != null)
                 {
-                    result &= condition.EvaluateCondition();
+                    bool result = condition.EvaluateCondition();
+                    if (result && (Combination == ConditionCombination.AtLeastOne))
+                    {
+                        return true;
+                    }
+                    allTrue &= result;
                 }
             }
-            return result;
+            return allTrue;
         }
         
         public override string ToString()

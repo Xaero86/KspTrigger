@@ -72,7 +72,7 @@ namespace KspTrigger
                 Rect lastRect = GUILayoutUtility.GetLastRect();
                 _listRect.y = lastRect.y;
                 _mainRect.y = lastRect.y;
-                _listRect.height = _windowSize.y - lastRect.y - rctOff.vertical;
+                _listRect.height = _windowSize.y - 2*lastRect.y - 2*rctOff.vertical;
                 _mainRect.height = _windowSize.y - 2*lastRect.y - 2*rctOff.vertical;
             }
 
