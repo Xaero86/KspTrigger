@@ -14,7 +14,7 @@ namespace KspTrigger
         private Autopilot _autopilot;
         public Autopilot Autopilot { get { return _autopilot; } }
         
-        public const string KEY_PREFIX     = "KAT_";
+        private const string KEY_PREFIX     = "KAT_";
         private const string KEY_NB_TIMER   = KEY_PREFIX+"nbTimers";
         private const string KEY_PREF_TIMER = KEY_PREFIX+"timer";
         private const string KEY_NB_TRIG    = KEY_PREFIX+"nbTriggers";

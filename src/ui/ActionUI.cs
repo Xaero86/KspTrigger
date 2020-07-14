@@ -47,7 +47,12 @@ namespace KspTrigger
             _popupUI = new PopupUI(Utils.ACTION_WINDOW_ID_POP);
             _partSelector = new PartSelector(this.SelectPart);
         }
-
+        
+        public Vector2 Position
+        {
+            get { return _windowRect.position; }
+        }
+        
         public void Display()
         {
             if (_triggerToConfigure != null)

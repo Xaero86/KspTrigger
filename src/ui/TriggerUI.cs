@@ -5,7 +5,6 @@ using UnityEngine;
 using KSP.UI.Screens;
 
 /* 
-save window position
 profil multi + import export
 breaking ground
 */
@@ -16,6 +15,21 @@ namespace KspTrigger
     public class TriggerUI : MonoBehaviour
     {
         private static Texture2D TEXTURE_BUTTON = null;
+        
+        private static string CONFIG_DIR  = "../PluginData";
+        private static string CONFIG_FILE = "KspTrigger.cfg";
+        private static string ICONE_FILE = "../button.png";
+        
+        private string _configFileDir;
+        private string _configFile;
+        
+        private const string KEY_WINDOW_NODE       = "WindowPos";
+        private const string KEY_TRIGGER_UI_POS    = "triggerUiPos";
+        private const string KEY_EVENT_UI_POS      = "eventUiPos";
+        private const string KEY_CONDITION_UI_POS  = "conditionUiPos";
+        private const string KEY_ACTION_UI_POS     = "actionUiPos";
+        private const string KEY_TIMER_CONF_UI_POS = "timerConfUiPos";
+        private const string KEY_TIMER_DISP_UI_POS = "timerDispUiPos";
 
         private ApplicationLauncherButton _mainButton = null;
         private bool _displayWindow = false;
@@ -33,11 +47,49 @@ namespace KspTrigger
         
         public void Awake()
         {
+            _configFileDir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), CONFIG_DIR);
+            _configFile = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), CONFIG_DIR, CONFIG_FILE);
+            
+            Vector2 eventUiPos = _windowRect.position + new Vector2(100,50);
+            Vector2 conditionUiPos = _windowRect.position + new Vector2(200,100);
+            Vector2 actionUiPos = _windowRect.position + new Vector2(300,150);
+            Vector2 timerConfUiPos = _windowRect.position + new Vector2(400,200);
+            Vector2 timerDispUiPos = new Vector2(Screen.width-350,20);
+            try {
+                Vector2 readPos = Vector2.zero;
+                ConfigNode addonConfig = ConfigNode.Load(_configFile);
+                ConfigNode windowConfig = addonConfig.GetNode(KEY_WINDOW_NODE);
+                if (windowConfig.TryGetValue(KEY_TRIGGER_UI_POS, ref readPos))
+                {
+                    _windowRect.position = readPos;
+                }
+                if (windowConfig.TryGetValue(KEY_EVENT_UI_POS, ref readPos))
+                {
+                    eventUiPos = readPos;
+                }
+                if (windowConfig.TryGetValue(KEY_CONDITION_UI_POS, ref readPos))
+                {
+                    conditionUiPos = readPos;
+                }
+                if (windowConfig.TryGetValue(KEY_ACTION_UI_POS, ref readPos))
+                {
+                    actionUiPos = readPos;
+                }
+                if (windowConfig.TryGetValue(KEY_TIMER_CONF_UI_POS, ref readPos))
+                {
+                    timerConfUiPos = readPos;
+                }
+                if (windowConfig.TryGetValue(KEY_TIMER_DISP_UI_POS, ref readPos))
+                {
+                    timerDispUiPos = readPos;
+                }
+            } catch (Exception) { }
+            
             if (TEXTURE_BUTTON == null)
             {
                 TEXTURE_BUTTON = new Texture2D(1, 1);
                 try {
-                    byte[] bytes = File.ReadAllBytes(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "../button.png"));
+                    byte[] bytes = File.ReadAllBytes(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), ICONE_FILE));
                     TEXTURE_BUTTON.LoadImage(bytes);
                 } catch (Exception e) {
                     Debug.LogError(Utils.DEBUG_PREFIX + e.Message);
@@ -51,10 +103,10 @@ namespace KspTrigger
                                 null, null, null, null,
                                 ApplicationLauncher.AppScenes.FLIGHT, TEXTURE_BUTTON);
 
-            _eventUI = new EventUI(_windowRect.position + new Vector2(100,50));
-            _conditionUI = new ConditionUI(_windowRect.position + new Vector2(200,100));
-            _actionUI = new ActionUI(_windowRect.position + new Vector2(300,150));
-            _timerUI = new TimerUI(_windowRect.position + new Vector2(400,200));
+            _eventUI = new EventUI(eventUiPos);
+            _conditionUI = new ConditionUI(conditionUiPos);
+            _actionUI = new ActionUI(actionUiPos);
+            _timerUI = new TimerUI(timerConfUiPos, timerDispUiPos);
             _vesselTriggers = null;
         }
         
@@ -79,6 +131,22 @@ namespace KspTrigger
         public void OnDestroy()
         {
             ApplicationLauncher.Instance.RemoveModApplication(_mainButton);
+
+            ConfigNode addonConfig = new ConfigNode("KspTrigger");
+            ConfigNode windowConfig = addonConfig.AddNode(KEY_WINDOW_NODE);
+            windowConfig.SetValue(KEY_TRIGGER_UI_POS, _windowRect.position, true);
+            windowConfig.SetValue(KEY_EVENT_UI_POS, _eventUI.Position, true);
+            windowConfig.SetValue(KEY_CONDITION_UI_POS, _conditionUI.Position, true);
+            windowConfig.SetValue(KEY_ACTION_UI_POS, _actionUI.Position, true);
+            windowConfig.SetValue(KEY_TIMER_CONF_UI_POS, _timerUI.PositionConf, true);
+            windowConfig.SetValue(KEY_TIMER_DISP_UI_POS, _timerUI.PositionDisp, true);
+
+            try {
+                Directory.CreateDirectory(_configFileDir);
+                addonConfig.Save(_configFile);
+            } catch (Exception e) {
+                Debug.LogError(Utils.DEBUG_PREFIX + e.Message);
+            }
         }
         
         public void OnGUI()

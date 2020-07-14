@@ -22,11 +22,20 @@ namespace KspTrigger
         
         private string _newName = "";
         
-        public TimerUI(Vector2 pos)
+        public TimerUI(Vector2 posConf, Vector2 posDisp)
         {
-            _windowConfRect = new Rect(pos, _windowConfSize);
-            Vector2 windowDispPos = new Vector2(Screen.width-350,20);
-            _windowDispRect = new Rect(windowDispPos, _windowDispSize);
+            _windowConfRect = new Rect(posConf, _windowConfSize);
+            _windowDispRect = new Rect(posDisp, _windowDispSize);
+        }
+        
+        public Vector2 PositionConf
+        {
+            get { return _windowConfRect.position; }
+        }
+        
+        public Vector2 PositionDisp
+        {
+            get { return _windowDispRect.position; }
         }
         
         public bool ToggleDisplay()
