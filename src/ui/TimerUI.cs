@@ -20,12 +20,13 @@ namespace KspTrigger
         private Rect _windowDispRect = Rect.zero;
         private Vector2 _scrollDispVector = Vector2.zero;
         
-        private string _newName = "";
+        private ModaleInput _modaleInput;
         
         public TimerUI(Vector2 posConf, Vector2 posDisp)
         {
             _windowConfRect = new Rect(posConf, _windowConfSize);
             _windowDispRect = new Rect(posDisp, _windowDispSize);
+            _modaleInput = new ModaleInput();
         }
         
         public Vector2 PositionConf
@@ -46,15 +47,16 @@ namespace KspTrigger
 
         public void Display()
         {
-            if ((_vesselTriggers != null) && _displayed)
+            if ((_vesselTriggers != null) && (_vesselTriggers.Timers != null) && _displayed)
             {
                 _windowConfRect = GUI.Window(Utils.TIMER_CONF_WINDOW_ID, _windowConfRect, DoConfWindow, "Timers configuration");
+                _modaleInput.Display(Utils.TIMER_CONF_WINDOW_ID+40,_windowConfRect);
             }
         }
         
         public void DisplayTimers()
         {
-            if (_vesselTriggers == null) return;
+            if ((_vesselTriggers == null) || (_vesselTriggers.Timers == null)) return;
             
             int nbToDisplay = 0;
             foreach (KeyValuePair<string,AbsTimer> entry in _vesselTriggers.Timers)
@@ -82,32 +84,18 @@ namespace KspTrigger
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("Add timer"))
             {
-                if (_vesselTriggers.AddTimer(_newName))
-                {
-                    _newName = "";
-                }
+                _modaleInput.Show("New timer name",NewTimer);
             }
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("Add countdown"))
             {
-                if (_vesselTriggers.AddCountdown(_newName))
-                {
-                    _newName = "";
-                }
+                _modaleInput.Show("New countdown name",NewCountdown);
             }
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("X"))
             {
                 _displayed = false;
             }
-            GUILayout.EndHorizontal();
-            
-            GUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-            GUILayout.Label("New timer name: ");
-            GUILayout.FlexibleSpace();
-            _newName = GUILayout.TextField(_newName, GUILayout.Width(labelWidth));
-            GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
             
             if (Event.current.type == EventType.Repaint)
@@ -165,14 +153,19 @@ namespace KspTrigger
             
             foreach (string key in removed)
             {
-                AbsTimer instance;
-                if (_vesselTriggers.Timers.TryGetValue(key, out instance))
-                {
-                    instance.Removed = true;
-                    _vesselTriggers.Timers.Remove(key);
-                }
+                _vesselTriggers.RemoveTimer(key);
             }
         }
+        
+        public void NewTimer(string name)
+        {
+            _vesselTriggers.AddTimer(name);
+        }
+        
+        public void NewCountdown(string name)
+        {
+            _vesselTriggers.AddCountdown(name);
+        } 
 
         public void DoTimerWindow(int windowID)
         {

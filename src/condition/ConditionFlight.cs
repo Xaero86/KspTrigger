@@ -127,7 +127,7 @@ namespace KspTrigger
             UpdatePersistentData();
         }
         
-        public override void LoadPersistentData()
+        public override void LoadPersistentData(TriggerConfig triggerConfig)
         {
             // Property name
             if (_propertyFields.ContainsKey(_propertyNamePers) || _propertyProperties.ContainsKey(_propertyNamePers) || _propertyMethods.ContainsKey(_propertyNamePers))

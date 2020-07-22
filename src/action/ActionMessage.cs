@@ -20,7 +20,7 @@ namespace KspTrigger
             UpdatePersistentData();
         }
         
-        public override void LoadPersistentData() {}
+        public override void LoadPersistentData(TriggerConfig triggerConfig) {}
         
         public override void UpdatePersistentData() {}
         

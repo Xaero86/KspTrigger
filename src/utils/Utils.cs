@@ -28,6 +28,7 @@ namespace KspTrigger
         public const int ACTION_WINDOW_ID        = MAIN_WINDOW_ID + 3;
         public const int TIMER_CONF_WINDOW_ID    = MAIN_WINDOW_ID + 4;
         public const int TIMER_DISP_WINDOW_ID    = MAIN_WINDOW_ID + 5;
+        public const int MAIN_WINDOW_ID_POP      = MAIN_WINDOW_ID + 20;
         public const int EVENT_WINDOW_ID_POP     = EVENT_WINDOW_ID + 20;
         public const int CONDITION_WINDOW_ID_POP = CONDITION_WINDOW_ID + 20;
         public const int ACTION_WINDOW_ID_POP    = ACTION_WINDOW_ID + 20;
@@ -456,6 +457,71 @@ namespace KspTrigger
             {
                 selected.Highlight(selected.HighlightActive || (GUI.tooltip == tooltip));
             }
+        }
+    }
+    
+    public class ModaleInput
+    {
+        public delegate void OnValid(string input);
+        
+        private string _message = null;
+        private OnValid _del = null;
+        private string _input = "";
+        
+        public void Show(string message, OnValid del, string defaultInput="")
+        {
+            _message = message;
+            _del = del;
+            _input = defaultInput;
+        }
+        
+        public void Hide()
+        {
+            _message = null;
+        }
+        
+        public void Display(int windowID, Rect parentRect)
+        {
+            if (_message == null)
+            {
+                return;
+            }
+
+            Vector2 size = parentRect.size/2;
+            Vector2 pos = parentRect.position+parentRect.size/2-size/2;
+            if (pos.x <= 0.0) pos.x = 0;
+            if (pos.y <= 0.0) pos.y = 0;
+            if (pos.x >= Screen.width - size.x) pos.x = Screen.width - size.x;
+            if (pos.y >= Screen.height - size.y) pos.y = Screen.height - size.y;
+            
+            GUI.ModalWindow(windowID, new Rect(pos, size), DoWindow, _message);
+        }
+        
+        public void DoWindow(int windowID)
+        {
+            GUILayout.BeginVertical();
+            GUILayout.FlexibleSpace();
+            _input = GUILayout.TextField(_input);
+            GUILayout.FlexibleSpace();
+            GUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("OK"))
+            {
+                if (_del != null)
+                {
+                    _del.Invoke(_input);
+                }
+                Hide();
+            }
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("Cancel"))
+            {
+                Hide();
+            }
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.FlexibleSpace();
+            GUILayout.EndVertical();
         }
     }
 }

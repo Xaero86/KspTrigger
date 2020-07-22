@@ -5,7 +5,7 @@ using UnityEngine;
 using KSP.UI.Screens;
 
 /* 
-profil multi + import export
+profil import export
 breaking ground
 */
 
@@ -30,17 +30,27 @@ namespace KspTrigger
         private const string KEY_ACTION_UI_POS     = "actionUiPos";
         private const string KEY_TIMER_CONF_UI_POS = "timerConfUiPos";
         private const string KEY_TIMER_DISP_UI_POS = "timerDispUiPos";
+        private const string KEY_MULTI_CONF_DISP   = "multiConfDisp";
 
         private ApplicationLauncherButton _mainButton = null;
         private bool _displayWindow = false;
-        private Rect _windowRect = new Rect(20, 40, 500, 300);
-        private Rect _boxPos = Rect.zero;
+        private Rect _windowRect = Rect.zero;
+        private readonly Vector2 _windowDefPos = new Vector2(20, 40);
+        private readonly float _mainWidth = 500;
+        private readonly float _multiConfWidth = 150;
+        private readonly float _windowHeight = 300;
+        private Rect _triggerArea = Rect.zero;
+        private Rect _multiConfArea = Rect.zero;
         private Vector2 _scrollViewVector = Vector2.zero;
+        private bool _displayMultiConf = false;
         
         private EventUI _eventUI;
         private ConditionUI _conditionUI;
         private ActionUI _actionUI;
         private TimerUI _timerUI;
+        
+        private PopupUI _popupUI;
+        private ModaleInput _modaleInput;
         
         // Data for current Vessel
         private VesselTriggers _vesselTriggers = null;
@@ -50,10 +60,12 @@ namespace KspTrigger
             _configFileDir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), CONFIG_DIR);
             _configFile = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), CONFIG_DIR, CONFIG_FILE);
             
-            Vector2 eventUiPos = _windowRect.position + new Vector2(100,50);
-            Vector2 conditionUiPos = _windowRect.position + new Vector2(200,100);
-            Vector2 actionUiPos = _windowRect.position + new Vector2(300,150);
-            Vector2 timerConfUiPos = _windowRect.position + new Vector2(400,200);
+            _displayMultiConf = false;
+            Vector2 triggerUiPos = _windowDefPos;
+            Vector2 eventUiPos = _windowDefPos + new Vector2(100,50);
+            Vector2 conditionUiPos = _windowDefPos + new Vector2(200,100);
+            Vector2 actionUiPos = _windowDefPos + new Vector2(300,150);
+            Vector2 timerConfUiPos = _windowDefPos + new Vector2(400,200);
             Vector2 timerDispUiPos = new Vector2(Screen.width-350,20);
             try {
                 Vector2 readPos = Vector2.zero;
@@ -61,7 +73,7 @@ namespace KspTrigger
                 ConfigNode windowConfig = addonConfig.GetNode(KEY_WINDOW_NODE);
                 if (windowConfig.TryGetValue(KEY_TRIGGER_UI_POS, ref readPos))
                 {
-                    _windowRect.position = readPos;
+                    triggerUiPos = readPos;
                 }
                 if (windowConfig.TryGetValue(KEY_EVENT_UI_POS, ref readPos))
                 {
@@ -83,7 +95,10 @@ namespace KspTrigger
                 {
                     timerDispUiPos = readPos;
                 }
+                windowConfig.TryGetValue(KEY_MULTI_CONF_DISP, ref _displayMultiConf);
             } catch (Exception) { }
+            
+            _windowRect = new Rect(triggerUiPos, new Vector2(_mainWidth,_windowHeight));
             
             if (TEXTURE_BUTTON == null)
             {
@@ -107,6 +122,8 @@ namespace KspTrigger
             _conditionUI = new ConditionUI(conditionUiPos);
             _actionUI = new ActionUI(actionUiPos);
             _timerUI = new TimerUI(timerConfUiPos, timerDispUiPos);
+            _popupUI = new PopupUI(Utils.MAIN_WINDOW_ID_POP);
+            _modaleInput = new ModaleInput();
             _vesselTriggers = null;
         }
         
@@ -140,6 +157,7 @@ namespace KspTrigger
             windowConfig.SetValue(KEY_ACTION_UI_POS, _actionUI.Position, true);
             windowConfig.SetValue(KEY_TIMER_CONF_UI_POS, _timerUI.PositionConf, true);
             windowConfig.SetValue(KEY_TIMER_DISP_UI_POS, _timerUI.PositionDisp, true);
+            windowConfig.SetValue(KEY_MULTI_CONF_DISP, _displayMultiConf, true);
 
             try {
                 Directory.CreateDirectory(_configFileDir);
@@ -155,11 +173,22 @@ namespace KspTrigger
             
             if (_displayWindow)
             {
+                if (!_displayMultiConf)
+                {
+                    _windowRect.width = _mainWidth;
+                }
+                else
+                {
+                    _windowRect.width = _mainWidth+_multiConfWidth;
+                }
                 _windowRect = GUI.Window(Utils.MAIN_WINDOW_ID, _windowRect, DoWindow, "Configure Trigger");
+                _popupUI.Display();
                 _eventUI.Display();
                 _conditionUI.Display();
                 _actionUI.Display();
                 _timerUI.Display();
+                
+                _modaleInput.Display(Utils.MAIN_WINDOW_ID+40,_windowRect);
             }
             _timerUI.DisplayTimers();
         }
@@ -168,18 +197,24 @@ namespace KspTrigger
         {
             Utils.InitGui();
             
+            if (Event.current.isMouse && (Event.current.button == 0) && (Event.current.type == EventType.MouseUp))
+            {
+                _popupUI.CloseAll();
+            }
+            
             float nameWidth = 80.0f;
-            float buttonWidth =  Math.Max(GUI.skin.button.CalcSize(new GUIContent("Event")).x, 
+            float buttonWidthT = Math.Max(GUI.skin.button.CalcSize(new GUIContent("Event")).x, 
                                  Math.Max(GUI.skin.button.CalcSize(new GUIContent("Condition")).x,
                                           GUI.skin.button.CalcSize(new GUIContent("Actions")).x));
             float resetWidth = GUI.skin.toggle.CalcSize(new GUIContent("R")).x + GUI.skin.label.CalcSize(new GUIContent("Reset auto")).x;
+            bool toggleMultiConf = false;
             
             GUILayout.BeginVertical();
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("Add trigger"))
             {
-                _vesselTriggers.AddNewConfig();
+                _vesselTriggers.AddNewTrigger();
             }
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("Configure timers"))
@@ -191,6 +226,15 @@ namespace KspTrigger
                 }
             }
             GUILayout.FlexibleSpace();
+            if (GUILayout.Button(_displayMultiConf?"Multi configuration <<":"Multi configuration >>"))
+            {
+                toggleMultiConf = true;
+            }
+            GUILayout.FlexibleSpace();
+            if (_displayMultiConf)
+            {
+                GUILayout.Space(_multiConfWidth);
+            }
             GUILayout.EndHorizontal();
             
             if (Event.current.type == EventType.Repaint)
@@ -198,12 +242,16 @@ namespace KspTrigger
                 Rect lastRect = GUILayoutUtility.GetLastRect();
                 RectOffset rctOff = GUI.skin.button.margin;
                 // position of area computed using "Add trigger" button position
-                _boxPos = new Rect(rctOff.left,
-                                   lastRect.y+lastRect.height+rctOff.top,
-                                   _windowRect.width-rctOff.horizontal,
-                                   _windowRect.height-(lastRect.y+lastRect.height+rctOff.vertical));
+                _triggerArea = new Rect(rctOff.left,
+                                        lastRect.y+lastRect.height+rctOff.top,
+                                        _mainWidth-rctOff.horizontal,
+                                        _windowHeight-(lastRect.y+lastRect.height+rctOff.vertical));
+                _multiConfArea = new Rect(_mainWidth+rctOff.left,
+                                        lastRect.y+rctOff.top,
+                                        _multiConfWidth-rctOff.horizontal,
+                                        _windowHeight-(lastRect.y+rctOff.vertical));
             }
-            GUILayout.BeginArea(_boxPos, GUI.skin.GetStyle("Box"));
+            GUILayout.BeginArea(_triggerArea, GUI.skin.GetStyle("Box"));
             _scrollViewVector = GUILayout.BeginScrollView(_scrollViewVector);
             foreach (Trigger trigger in _vesselTriggers.Triggers.ToArray())
             {
@@ -235,7 +283,7 @@ namespace KspTrigger
                 {
                     style = Utils.BUTTON_STYLE_PENDING;
                 }
-                if (GUILayout.Button(new GUIContent("Event", tooltip), style, GUILayout.Width(buttonWidth)))
+                if (GUILayout.Button(new GUIContent("Event", tooltip), style, GUILayout.Width(buttonWidthT)))
                 {
                     _eventUI.Configure(trigger);
                     GUI.BringWindowToFront(Utils.EVENT_WINDOW_ID);
@@ -250,7 +298,7 @@ namespace KspTrigger
                 {
                     style = Utils.BUTTON_STYLE_PENDING;
                 }
-                if (GUILayout.Button(new GUIContent("Condition", tooltip), style, GUILayout.Width(buttonWidth)))
+                if (GUILayout.Button(new GUIContent("Condition", tooltip), style, GUILayout.Width(buttonWidthT)))
                 {
                     _conditionUI.Configure(trigger);
                     GUI.BringWindowToFront(Utils.CONDITION_WINDOW_ID);
@@ -269,7 +317,7 @@ namespace KspTrigger
                 {
                     style = Utils.BUTTON_STYLE_INVALID;
                 }
-                if (GUILayout.Button(new GUIContent("Actions", tooltip), style, GUILayout.Width(buttonWidth)))
+                if (GUILayout.Button(new GUIContent("Actions", tooltip), style, GUILayout.Width(buttonWidthT)))
                 {
                     _actionUI.Configure(trigger);
                     GUI.BringWindowToFront(Utils.ACTION_WINDOW_ID);
@@ -309,6 +357,76 @@ namespace KspTrigger
             GUILayout.EndScrollView();
             GUILayout.EndArea();
             GUILayout.EndVertical();
+            
+            if (_displayMultiConf)
+            {
+                // Multi configuration
+                GUILayout.BeginArea(_multiConfArea, GUI.skin.GetStyle("Box"));
+                GUILayout.BeginVertical();
+                GUILayout.Label("Current configuration:");
+                // Select configuration
+                GUILayout.FlexibleSpace();
+                int newConfigIndex = _popupUI.GUILayoutPopup("popupConfiguration", _vesselTriggers.ConfigList, _vesselTriggers.ConfigIndex);
+                // New configuration
+                GUILayout.FlexibleSpace();
+                GUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("New", GUILayout.Width(80.0f)))
+                {
+                    _modaleInput.Show("New configuration name",NewConfig);
+                }
+                GUILayout.FlexibleSpace();
+                GUILayout.EndHorizontal();
+                // Rename configuration
+                GUILayout.FlexibleSpace();
+                GUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("Rename", GUILayout.Width(80.0f)))
+                {
+                    _modaleInput.Show("New configuration name",RenameConfig,_vesselTriggers.CurrentName);
+                }
+                GUILayout.FlexibleSpace();
+                GUILayout.EndHorizontal();
+                // Delete configuration
+                GUILayout.FlexibleSpace();
+                GUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("Delete", GUILayout.Width(80.0f)))
+                {
+                    _vesselTriggers.RemoveCurrent();
+                }
+                GUILayout.FlexibleSpace();
+                GUILayout.EndHorizontal();
+                // Import configuration
+                GUILayout.FlexibleSpace();
+                GUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("Import", GUILayout.Width(80.0f)))
+                {
+                    // TODO
+                }
+                GUILayout.FlexibleSpace();
+                GUILayout.EndHorizontal();
+                // Export configuration
+                GUILayout.FlexibleSpace();
+                GUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("Export", GUILayout.Width(80.0f)))
+                {
+                    // TODO
+                }
+                GUILayout.FlexibleSpace();
+                GUILayout.EndHorizontal();
+                GUILayout.FlexibleSpace();
+                GUILayout.EndVertical();
+                GUILayout.EndArea();
+                
+                if (Event.current.type == EventType.Repaint)
+                {
+                    _vesselTriggers.ConfigIndex = newConfigIndex;
+                }
+            }
+            
             GUI.DragWindow(new Rect(0, 0, 10000, 10000));
             
             // Tooltip
@@ -316,6 +434,11 @@ namespace KspTrigger
             {
                 GUIContent content = new GUIContent(GUI.tooltip);
                 GUI.Label(new Rect(Event.current.mousePosition, GUI.skin.box.CalcSize(content)), content);
+            }
+            
+            if (toggleMultiConf)
+            {
+                _displayMultiConf = !_displayMultiConf;
             }
         }
         
@@ -327,6 +450,16 @@ namespace KspTrigger
                 _vesselTriggers.Update();
             }
         }
+        
+        public void NewConfig(string name)
+        {
+            _vesselTriggers.AddNewConfig(name);
+        }
+        
+        public void RenameConfig(string name)
+        {
+            _vesselTriggers.RenameCurrent(name);
+        }          
     }
 }
 

@@ -98,7 +98,7 @@ namespace KspTrigger
             _modified = false;
         }
         
-        public override void LoadPersistentData()
+        public override void LoadPersistentData(TriggerConfig triggerConfig)
         {
             // Action name
             if (_actionFields.ContainsKey(_actionNamePers) || _actionMethods.ContainsKey(_actionNamePers))

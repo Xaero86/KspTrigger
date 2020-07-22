@@ -62,9 +62,9 @@ namespace KspTrigger
             _previousValue = true;
         }
         
-        public void LoadPersistentData()
+        public void LoadPersistentData(TriggerConfig triggerConfig)
         {
-            _condition.LoadPersistentData();
+            _condition.LoadPersistentData(triggerConfig);
         }
         
         public void UpdatePersistentData()

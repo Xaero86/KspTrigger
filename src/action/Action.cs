@@ -32,7 +32,7 @@ namespace KspTrigger
             _modified = false;
         }
         
-        public abstract void LoadPersistentData();
+        public abstract void LoadPersistentData(TriggerConfig triggerConfig);
         public abstract void UpdatePersistentData();
         
         public virtual bool Modified { get { return _modified; } }
@@ -151,13 +151,13 @@ namespace KspTrigger
             }
         }
         
-        public void LoadPersistentData()
+        public void LoadPersistentData(TriggerConfig triggerConfig)
         {
             foreach (TriggerAction action in _actions)
             {
                 if (action != null)
                 {
-                    action.LoadPersistentData();
+                    action.LoadPersistentData(triggerConfig);
                 }
             }
         }

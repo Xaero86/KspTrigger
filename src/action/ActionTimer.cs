@@ -40,9 +40,10 @@ namespace KspTrigger
             UpdatePersistentData();
         }
         
-        public override void LoadPersistentData()
+        public override void LoadPersistentData(TriggerConfig triggerConfig)
         {
-            Name = _timerNamePers;
+            _name = _timerNamePers;
+            _timer = triggerConfig.GetTimer(_name);
             _timerAction = _timerActionPers;
         }
         

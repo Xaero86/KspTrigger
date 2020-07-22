@@ -141,7 +141,7 @@ namespace KspTrigger
             _modified = false;
         }
         
-        public override void LoadPersistentData()
+        public override void LoadPersistentData(TriggerConfig triggerConfig)
         {
             // Part UID
             ActionPart = _vesselTriggers.Vessel[_partIdPers];
