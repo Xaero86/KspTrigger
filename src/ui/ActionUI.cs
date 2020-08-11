@@ -4,21 +4,19 @@ using UnityEngine;
 
 namespace KspTrigger
 {
-    public class ActionUI
+    public class ActionUI : AbstractUI
     {
-        private VesselTriggers _vesselTriggers = null;
-        public VesselTriggers VesselTriggers { set { _vesselTriggers = value; } }
-        
         private Trigger _triggerToConfigure = null;
         public Trigger TriggerToConfigure { get { return _triggerToConfigure; } }
+        
+        public override Vector2 Size { get { return new Vector2(530, 230); } }
+        protected override int _windowID { get { return Utils.ACTION_WINDOW_ID; } }
+        protected override string _windowTitle { get { return "Configure Actions"; } }
 
         private const int LEFT_PANEL_WIDTH = 80;
         private const float LEFT_MARGING = 20.0f;
         private const float RIGHT_MARGING = 20.0f;
         
-        private readonly Vector2 _windowSize = new Vector2(530, 230);
-        
-        private Rect _windowRect = Rect.zero;
         private Rect _listRect = Rect.zero;
         private Rect _mainRect = Rect.zero;
         private Vector2 _scrollVectAction = Vector2.zero;
@@ -35,39 +33,20 @@ namespace KspTrigger
         private TriggerActionTimer _actionTimer = null;
         private TriggerAction _currentAction = null;
         private TriggerActions _actions = null;
-        
-        private PopupUI _popupUI;
-        private PartSelector _partSelector;
-        
-        public ActionUI(Vector2 pos)
+
+        public ActionUI(Vector2 pos) : base(pos)
         {
-            _windowRect = new Rect(pos, _windowSize);
-            _listRect = new Rect(0, 0, LEFT_PANEL_WIDTH, _windowSize.y);
-            _mainRect = new Rect(LEFT_PANEL_WIDTH, 0, _windowSize.x-LEFT_PANEL_WIDTH, _windowSize.y);
-            _popupUI = new PopupUI(Utils.ACTION_WINDOW_ID_POP);
-            _partSelector = new PartSelector(this.SelectPart);
+            _listRect = new Rect(0, 0, LEFT_PANEL_WIDTH, Size.y);
+            _mainRect = new Rect(LEFT_PANEL_WIDTH, 0, Size.x-LEFT_PANEL_WIDTH, Size.y);
         }
         
-        public Vector2 Position
+        protected override bool _isDisplayed()
         {
-            get { return _windowRect.position; }
+            return _triggerToConfigure != null;
         }
         
-        public void Display()
+        protected override void _doWindow()
         {
-            if (_triggerToConfigure != null)
-            {
-                _windowRect = GUI.Window(Utils.ACTION_WINDOW_ID, _windowRect, DoWindow, "Configure Actions");
-                _popupUI.Display();
-            }
-        }
-        
-        public void DoWindow(int windowID)
-        {
-            if (Event.current.isMouse && (Event.current.button == 0) && (Event.current.type == EventType.MouseUp))
-            {
-                _popupUI.CloseAll();
-            }
             GUILayout.BeginVertical();
             // fake label to get position
             GUILayout.Label(" ");
@@ -77,8 +56,8 @@ namespace KspTrigger
                 Rect lastRect = GUILayoutUtility.GetLastRect();
                 _listRect.y = lastRect.y;
                 _mainRect.y = lastRect.y;
-                _listRect.height = _windowSize.y - 2*lastRect.y - 2*rctOff.vertical;
-                _mainRect.height = _windowSize.y - 2*lastRect.y - 2*rctOff.vertical;
+                _listRect.height = Size.y - 2*lastRect.y - 2*rctOff.vertical;
+                _mainRect.height = Size.y - 2*lastRect.y - 2*rctOff.vertical;
             }
 
             DisplayLeftPanel();
@@ -105,14 +84,6 @@ namespace KspTrigger
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
-            GUI.DragWindow(new Rect(0, 0, 10000, 10000));
-            
-            // Tooltip
-            if ((GUI.tooltip != "") && (Event.current.type == EventType.Repaint))
-            {
-                GUIContent content = new GUIContent(GUI.tooltip);
-                GUI.Label(new Rect(Event.current.mousePosition, GUI.skin.box.CalcSize(content)), content);
-            }
         }
         
         private void DisplayLeftPanel()
@@ -149,7 +120,6 @@ namespace KspTrigger
                 {
                     if (_actionIndex != i)
                     {
-                        _partSelector.CancelSelect();
                         SelectAction(i);
                     }
                 }
@@ -172,7 +142,6 @@ namespace KspTrigger
             int newIndexActionType = GUILayout.Toolbar(_actionIndexType, Enum.GetNames(typeof(TriggerActionType)));
             if (newIndexActionType != _actionIndexType)
             {
-                _partSelector.CancelSelect();
                 _actionIndexType = newIndexActionType;
             }
             if (Event.current.type == EventType.Repaint)
@@ -233,7 +202,6 @@ namespace KspTrigger
         public void Close()
         {
             _triggerToConfigure = null;
-            _partSelector.CancelSelect();
         }
         
         private void DisplayPartConf()
@@ -282,7 +250,11 @@ namespace KspTrigger
             GUILayout.BeginVertical();
             // Part
             GUILayout.BeginHorizontal();
-            _partSelector.DisplayLayout(_actionPart.ActionPart);
+            string buttonLabel = (_actionPart.ActionPart != null) ? _actionPart.ActionPart.ToString() : "Select";
+            if (GUILayout.Button(new GUIContent(buttonLabel)))
+            {
+                ModalDialog.ModalPartSelector(_windowRect,"Select Part to act on",SelectPart,_actionPart.ActionPart);
+            }
             GUILayout.Space(RIGHT_MARGING);
             GUILayout.EndHorizontal();
             // Action
@@ -468,7 +440,6 @@ namespace KspTrigger
         private void SelectAction(int actionIndex)
         {
             _actionIndex = actionIndex;
-            _partSelector.CancelSelect();
             _popupUI.CloseAll();
             _actionPart = null;
             _actionFlight = null;

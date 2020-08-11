@@ -27,6 +27,8 @@ namespace KspTrigger
             }
         }
         
+        private ImportExportHelper _impExpHelp = new ImportExportHelper();
+        
         public List<Trigger> Triggers
         {
             get { return _triggerConfigs[ConfigIndex].Triggers; }
@@ -132,6 +134,29 @@ namespace KspTrigger
         {
             _triggerConfigs[ConfigIndex].Name = name;
         }
+        
+        public void ImportConfig(string name)
+        {
+            TriggerConfig triggerConfig = _impExpHelp.ImportConfig(name, this);
+            if (triggerConfig != null)
+            {
+                _triggerConfigs.Add(triggerConfig);
+                // Select imported
+                ConfigIndex = _triggerConfigs.Count-1;
+            }
+        }
+        
+        public bool ExportConfig(string name, bool erase)
+        {
+            if (!erase && _impExpHelp.Exists(name))
+            {
+                return false;
+            }
+            _impExpHelp.ExportConfig(name, _triggerConfigs[ConfigIndex]);
+            return true;
+        }
+        
+        public string[] ImportableList { get { return _impExpHelp.ImportableList;} }
         
         public void RemoveCurrent()
         {

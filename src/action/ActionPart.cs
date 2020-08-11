@@ -178,7 +178,7 @@ namespace KspTrigger
                 _partIdPers = _part.flightID;
             }
             // Save action name, not index
-            if ((_actionList != null) && (_actionIndex < _actionList.Length))
+            if ((_actionList != null) && (_actionIndex >= 0) && (_actionIndex < _actionList.Length))
             {
                 _actionNamePers = _actionList[_actionIndex];
             }

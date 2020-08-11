@@ -4,56 +4,38 @@ using UnityEngine;
 
 namespace KspTrigger
 {
-    public class TimerUI
+    public class TimerUI : AbstractUI
     {
-        private VesselTriggers _vesselTriggers = null;
-        public VesselTriggers VesselTriggers { set { _vesselTriggers = value; } }
+        public override Vector2 Size { get { return new Vector2(400, 200); } }
+        protected override int _windowID { get { return Utils.TIMER_CONF_WINDOW_ID; } }
+        protected override string _windowTitle { get { return "Configure Timers"; } }
         
-        private readonly Vector2 _windowConfSize = new Vector2(400, 200);
+        private Rect _windowDispRect = Rect.zero;
         private readonly Vector2 _windowDispSize = new Vector2(300, 150);
+        public Vector2 PositionDisp { get { return _windowDispRect.position; } }
         
-        private Rect _windowConfRect = Rect.zero;
         private Rect _boxPos = Rect.zero;
         private Vector2 _scrollConfVector = Vector2.zero;
         private bool _displayed = false;
         
-        private Rect _windowDispRect = Rect.zero;
         private Vector2 _scrollDispVector = Vector2.zero;
         
-        private ModaleInput _modaleInput;
-        
-        public TimerUI(Vector2 posConf, Vector2 posDisp)
+        public TimerUI(Vector2 posConf, Vector2 posDisp) : base(posConf)
         {
-            _windowConfRect = new Rect(posConf, _windowConfSize);
             _windowDispRect = new Rect(posDisp, _windowDispSize);
-            _modaleInput = new ModaleInput();
         }
         
-        public Vector2 PositionConf
+        protected override bool _isDisplayed()
         {
-            get { return _windowConfRect.position; }
+            return (_vesselTriggers != null) && (_vesselTriggers.Timers != null) && _displayed;
         }
-        
-        public Vector2 PositionDisp
-        {
-            get { return _windowDispRect.position; }
-        }
-        
+
         public bool ToggleDisplay()
         {
             _displayed = !_displayed;
             return _displayed;
         }
 
-        public void Display()
-        {
-            if ((_vesselTriggers != null) && (_vesselTriggers.Timers != null) && _displayed)
-            {
-                _windowConfRect = GUI.Window(Utils.TIMER_CONF_WINDOW_ID, _windowConfRect, DoConfWindow, "Timers configuration");
-                _modaleInput.Display(Utils.TIMER_CONF_WINDOW_ID+40,_windowConfRect);
-            }
-        }
-        
         public void DisplayTimers()
         {
             if ((_vesselTriggers == null) || (_vesselTriggers.Timers == null)) return;
@@ -72,7 +54,7 @@ namespace KspTrigger
             }
         }
 
-        public void DoConfWindow(int windowID)
+        protected override void _doWindow()
         {
             float labelWidth = GUI.skin.label.CalcSize(new GUIContent("XXXXXXXX")).x;
             float init2Width = GUI.skin.label.CalcSize(new GUIContent("Start at ")).x;
@@ -84,12 +66,12 @@ namespace KspTrigger
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("Add timer"))
             {
-                _modaleInput.Show("New timer name",NewTimer);
+                ModalDialog.ModalInput(_windowRect,"New timer name",NewTimer);
             }
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("Add countdown"))
             {
-                _modaleInput.Show("New countdown name",NewCountdown);
+                ModalDialog.ModalInput(_windowRect,"New countdown name",NewCountdown);
             }
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("X"))
@@ -105,8 +87,8 @@ namespace KspTrigger
                 // position of area computed using "Add trigger" button position
                 _boxPos = new Rect(rctOff.left,
                                 lastRect.y+lastRect.height+rctOff.top,
-                                _windowConfRect.width-rctOff.horizontal,
-                                _windowConfRect.height-(lastRect.y+lastRect.height+rctOff.vertical));
+                                _windowRect.width-rctOff.horizontal,
+                                _windowRect.height-(lastRect.y+lastRect.height+rctOff.vertical));
             }
             GUILayout.BeginArea(_boxPos, GUI.skin.GetStyle("Box"));
             _scrollConfVector = GUILayout.BeginScrollView(_scrollConfVector);
@@ -149,7 +131,6 @@ namespace KspTrigger
             GUILayout.EndScrollView();
             GUILayout.EndArea();
             GUILayout.EndVertical();
-            GUI.DragWindow(new Rect(0, 0, 10000, 10000));
             
             foreach (string key in removed)
             {

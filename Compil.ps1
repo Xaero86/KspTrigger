@@ -23,6 +23,7 @@ New-Item -ItemType Directory -Force -Path $ADDON_LIB_PATH > $null
 $SRC_DIR = "src"
 $SRC_SUBDIRS = "action", "condition", "event", "trigger", "ui", "utils"
 $SRC_FILES = @()
+$SRC_FILES += $([IO.Path]::Combine($SRC_DIR, '*.cs'))
 ForEach ($subdir in $SRC_SUBDIRS)
 {
   $SRC_FILES += $([IO.Path]::Combine($SRC_DIR, $subdir, '*.cs'))

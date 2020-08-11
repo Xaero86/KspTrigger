@@ -160,7 +160,7 @@ namespace KspTrigger
             _methodParameterPers = null;
             
             // Save property name, not index
-            if (_propertyIndex < PropertyList.Length)
+            if ((_propertyIndex >= 0) && (_propertyIndex < PropertyList.Length))
             {
                 _propertyNamePers = PropertyList[_propertyIndex];
             }

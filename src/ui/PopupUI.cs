@@ -48,6 +48,7 @@ namespace KspTrigger
                     Close();
                     return;
                 }
+
                 GUI.Window(_windowID, _popupDisplayRect, DoPopup, "");
             }
         }

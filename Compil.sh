@@ -34,7 +34,7 @@ compile()
   # Production
   SRC_DIR="src"
   SRC_SUBDIRS="action condition event trigger ui utils"
-  SRC_FILES=""
+  SRC_FILES=$SRC_DIR/*.cs
   for subdir in $SRC_SUBDIRS
   do
     SRC_FILES=${SRC_FILES:+$SRC_FILES }$SRC_DIR/$subdir/*.cs

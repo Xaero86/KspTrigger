@@ -154,7 +154,7 @@ namespace KspTrigger
                 _partIdPers = _part.flightID;
             }
             // Save property name, not index
-            if ((_propertyList != null) && (_propertyIndex < _propertyList.Length))
+            if ((_propertyList != null) && (_propertyIndex >= 0) && (_propertyIndex < _propertyList.Length))
             {
                 _propertyNamePers = _propertyList[_propertyIndex];
             }

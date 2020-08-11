@@ -123,7 +123,7 @@ namespace KspTrigger
             _methodParameterPers = null;
             
             // Save action name, not index
-            if (_actionIndex < ActionList.Length)
+            if ((_actionIndex >= 0) && (_actionIndex < ActionList.Length))
             {
                 _actionNamePers = ActionList[_actionIndex];
             }

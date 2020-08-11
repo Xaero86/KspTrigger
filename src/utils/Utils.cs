@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +10,33 @@ namespace KspTrigger
     public static class Utils
     {
         public const string DEBUG_PREFIX = "[KAT] ";
+        
+        private static bool _STATIC_PATH_INIT_DONE = false;
+        private static string _CONFIG_DIR_NAME  = "PluginData";
+        private static string _CONFIG_FILE_NAME = "KspTrigger.cfg";
+        private static string _ICONE_FILE_NAME = "button.png";
+        
+        private static string _ADDON_BASE_PATH = null;
+        private static string _ICON_FILE = null;
+        public static string ICON_FILE { get {return _ICON_FILE;} }
+        private static string _CONFIG_FILE_DIR = null;
+        public static string CONFIG_FILE_DIR { get {return _CONFIG_FILE_DIR;} }
+        private static string _CONFIG_FILE = null;
+        public static string CONFIG_FILE { get {return _CONFIG_FILE;} }
+        private static string _IMPORT_EXPORT_DIR = null;
+        public static string IMPORT_EXPORT_DIR { get {return _IMPORT_EXPORT_DIR;} }
+        
+        public static void InitPath()
+        {
+            if (_STATIC_PATH_INIT_DONE) return;
+            
+            _STATIC_PATH_INIT_DONE = true;
+            _ADDON_BASE_PATH = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "..");
+            _ICON_FILE = Path.Combine(_ADDON_BASE_PATH, _ICONE_FILE_NAME);
+            _CONFIG_FILE_DIR = Path.Combine(_ADDON_BASE_PATH, _CONFIG_DIR_NAME);
+            _CONFIG_FILE = Path.Combine(_CONFIG_FILE_DIR, _CONFIG_FILE_NAME);
+            _IMPORT_EXPORT_DIR = Path.Combine(_ADDON_BASE_PATH, _CONFIG_DIR_NAME);
+        }
         
         private static bool _STATIC_GUI_INIT_DONE = false;
         private static GUIStyle _BUTTON_STYLE_VALID = null;
@@ -28,10 +56,8 @@ namespace KspTrigger
         public const int ACTION_WINDOW_ID        = MAIN_WINDOW_ID + 3;
         public const int TIMER_CONF_WINDOW_ID    = MAIN_WINDOW_ID + 4;
         public const int TIMER_DISP_WINDOW_ID    = MAIN_WINDOW_ID + 5;
-        public const int MAIN_WINDOW_ID_POP      = MAIN_WINDOW_ID + 20;
-        public const int EVENT_WINDOW_ID_POP     = EVENT_WINDOW_ID + 20;
-        public const int CONDITION_WINDOW_ID_POP = CONDITION_WINDOW_ID + 20;
-        public const int ACTION_WINDOW_ID_POP    = ACTION_WINDOW_ID + 20;
+        public const int MODAL_DIAL_WINDOW_ID    = MAIN_WINDOW_ID + 10;
+        public const int WINDOW_ID_POP_OFFSET    = 20;
         
         public static void InitGui()
         {
@@ -363,165 +389,6 @@ namespace KspTrigger
                 }
                 return result;
             }
-        }
-    }
-    
-    public class PartSelector
-    {
-        public delegate void OnSelect(Part part);
-        
-        private OnSelect _del;
-        private bool _selecting;
-        private List<Part> _partList;
-        
-        public PartSelector(OnSelect del)
-        {
-            _del = del;
-            _selecting = false;
-            _partList = new List<Part>();
-        }
-        
-        private bool Selecting
-        {
-            set
-            {
-                if (_selecting != value)
-                {
-                    _selecting = value;
-                    if (_selecting)
-                    {
-                        _partList.Clear();
-                        foreach (Part part in FlightGlobals.ActiveVessel.parts)
-                        {
-                            part.AddOnMouseDown(MouseDownHandler);
-                            _partList.Add(part);
-                        }
-                    }
-                    else
-                    {
-                        foreach (Part part in _partList)
-                        {
-                            if (part != null)
-                            {
-                                part.RemoveOnMouseDown(MouseDownHandler);
-                            }
-                        }
-                        _partList.Clear();
-                    }
-                }
-            }
-            
-            get { return _selecting; }
-        }
-        
-        private void MouseDownHandler(Part part)
-        {
-            if ((_del != null) && (part != null))
-            {
-                if (part.HighlightActive)
-                {
-                    // when it work
-                    _del.Invoke(part);
-                }
-                else
-                {
-                    // Some part dont handle click. parent part is handled instead
-                    foreach (Part child in part.children)
-                    {
-                        if (child.HighlightActive)
-                        {
-                            _del.Invoke(child);
-                            break;
-                        }
-                    }
-                }
-                Selecting = false;
-            }
-        }
-        
-        public void CancelSelect()
-        {
-            Selecting = false;
-        }
-        
-        public void DisplayLayout(Part selected)
-        {
-            string buttonLabel = (selected != null) ? selected.ToString() : "Select";
-            GUIStyle style = _selecting ? Utils.BUTTON_STYLE_PENDING : Utils.BUTTON_STYLE_VALID;
-            string tooltip = "SelectPart";
-            if (GUILayout.Button(new GUIContent(buttonLabel, tooltip), style))
-            {
-                Selecting = !Selecting;
-            }
-            if ((selected != null) && !_selecting)
-            {
-                selected.Highlight(selected.HighlightActive || (GUI.tooltip == tooltip));
-            }
-        }
-    }
-    
-    public class ModaleInput
-    {
-        public delegate void OnValid(string input);
-        
-        private string _message = null;
-        private OnValid _del = null;
-        private string _input = "";
-        
-        public void Show(string message, OnValid del, string defaultInput="")
-        {
-            _message = message;
-            _del = del;
-            _input = defaultInput;
-        }
-        
-        public void Hide()
-        {
-            _message = null;
-        }
-        
-        public void Display(int windowID, Rect parentRect)
-        {
-            if (_message == null)
-            {
-                return;
-            }
-
-            Vector2 size = parentRect.size/2;
-            Vector2 pos = parentRect.position+parentRect.size/2-size/2;
-            if (pos.x <= 0.0) pos.x = 0;
-            if (pos.y <= 0.0) pos.y = 0;
-            if (pos.x >= Screen.width - size.x) pos.x = Screen.width - size.x;
-            if (pos.y >= Screen.height - size.y) pos.y = Screen.height - size.y;
-            
-            GUI.ModalWindow(windowID, new Rect(pos, size), DoWindow, _message);
-        }
-        
-        public void DoWindow(int windowID)
-        {
-            GUILayout.BeginVertical();
-            GUILayout.FlexibleSpace();
-            _input = GUILayout.TextField(_input);
-            GUILayout.FlexibleSpace();
-            GUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("OK"))
-            {
-                if (_del != null)
-                {
-                    _del.Invoke(_input);
-                }
-                Hide();
-            }
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("Cancel"))
-            {
-                Hide();
-            }
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            GUILayout.FlexibleSpace();
-            GUILayout.EndVertical();
         }
     }
 }

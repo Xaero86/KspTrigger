@@ -1,41 +1,36 @@
 using System;
-using System.IO;
-using System.Reflection;
 using UnityEngine;
-using KSP.UI.Screens;
-
-/* 
-profil import export
-breaking ground
-*/
 
 namespace KspTrigger
 {
-    [KSPAddon(KSPAddon.Startup.Flight, false)]
-    public class TriggerUI : MonoBehaviour
+    public class TriggerUI : AbstractUI
     {
-        private static Texture2D TEXTURE_BUTTON = null;
+        private EventUI _eventUI;
+        public EventUI EventUI { set { _eventUI = value; } }
+        private ConditionUI _conditionUI;
+        public ConditionUI ConditionUI { set { _conditionUI = value; } }
+        private ActionUI _actionUI;
+        public ActionUI ActionUI { set { _actionUI = value; } }
+        private TimerUI _timerUI;
+        public TimerUI TimerUI { set { _timerUI = value; } }
         
-        private static string CONFIG_DIR  = "../PluginData";
-        private static string CONFIG_FILE = "KspTrigger.cfg";
-        private static string ICONE_FILE = "../button.png";
+        public override Vector2 Size
+        {
+            get
+            {
+                if (!_displayMultiConf)
+                {
+                    return new Vector2(_mainWidth, _windowHeight);
+                }
+                else
+                {
+                    return new Vector2(_mainWidth+_multiConfWidth, _windowHeight);
+                }
+            }
+        }
+        protected override int _windowID { get { return Utils.MAIN_WINDOW_ID; } }
+        protected override string _windowTitle { get { return "Configure Triggers"; } }
         
-        private string _configFileDir;
-        private string _configFile;
-        
-        private const string KEY_WINDOW_NODE       = "WindowPos";
-        private const string KEY_TRIGGER_UI_POS    = "triggerUiPos";
-        private const string KEY_EVENT_UI_POS      = "eventUiPos";
-        private const string KEY_CONDITION_UI_POS  = "conditionUiPos";
-        private const string KEY_ACTION_UI_POS     = "actionUiPos";
-        private const string KEY_TIMER_CONF_UI_POS = "timerConfUiPos";
-        private const string KEY_TIMER_DISP_UI_POS = "timerDispUiPos";
-        private const string KEY_MULTI_CONF_DISP   = "multiConfDisp";
-
-        private ApplicationLauncherButton _mainButton = null;
-        private bool _displayWindow = false;
-        private Rect _windowRect = Rect.zero;
-        private readonly Vector2 _windowDefPos = new Vector2(20, 40);
         private readonly float _mainWidth = 500;
         private readonly float _multiConfWidth = 150;
         private readonly float _windowHeight = 300;
@@ -43,165 +38,20 @@ namespace KspTrigger
         private Rect _multiConfArea = Rect.zero;
         private Vector2 _scrollViewVector = Vector2.zero;
         private bool _displayMultiConf = false;
+        public bool DisplayMultiConf { get { return _displayMultiConf; } }
         
-        private EventUI _eventUI;
-        private ConditionUI _conditionUI;
-        private ActionUI _actionUI;
-        private TimerUI _timerUI;
-        
-        private PopupUI _popupUI;
-        private ModaleInput _modaleInput;
-        
-        // Data for current Vessel
-        private VesselTriggers _vesselTriggers = null;
-        
-        public void Awake()
+        public TriggerUI(Vector2 pos, bool displayMultiConf) : base(pos)
         {
-            _configFileDir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), CONFIG_DIR);
-            _configFile = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), CONFIG_DIR, CONFIG_FILE);
-            
-            _displayMultiConf = false;
-            Vector2 triggerUiPos = _windowDefPos;
-            Vector2 eventUiPos = _windowDefPos + new Vector2(100,50);
-            Vector2 conditionUiPos = _windowDefPos + new Vector2(200,100);
-            Vector2 actionUiPos = _windowDefPos + new Vector2(300,150);
-            Vector2 timerConfUiPos = _windowDefPos + new Vector2(400,200);
-            Vector2 timerDispUiPos = new Vector2(Screen.width-350,20);
-            try {
-                Vector2 readPos = Vector2.zero;
-                ConfigNode addonConfig = ConfigNode.Load(_configFile);
-                ConfigNode windowConfig = addonConfig.GetNode(KEY_WINDOW_NODE);
-                if (windowConfig.TryGetValue(KEY_TRIGGER_UI_POS, ref readPos))
-                {
-                    triggerUiPos = readPos;
-                }
-                if (windowConfig.TryGetValue(KEY_EVENT_UI_POS, ref readPos))
-                {
-                    eventUiPos = readPos;
-                }
-                if (windowConfig.TryGetValue(KEY_CONDITION_UI_POS, ref readPos))
-                {
-                    conditionUiPos = readPos;
-                }
-                if (windowConfig.TryGetValue(KEY_ACTION_UI_POS, ref readPos))
-                {
-                    actionUiPos = readPos;
-                }
-                if (windowConfig.TryGetValue(KEY_TIMER_CONF_UI_POS, ref readPos))
-                {
-                    timerConfUiPos = readPos;
-                }
-                if (windowConfig.TryGetValue(KEY_TIMER_DISP_UI_POS, ref readPos))
-                {
-                    timerDispUiPos = readPos;
-                }
-                windowConfig.TryGetValue(KEY_MULTI_CONF_DISP, ref _displayMultiConf);
-            } catch (Exception) { }
-            
-            _windowRect = new Rect(triggerUiPos, new Vector2(_mainWidth,_windowHeight));
-            
-            if (TEXTURE_BUTTON == null)
-            {
-                TEXTURE_BUTTON = new Texture2D(1, 1);
-                try {
-                    byte[] bytes = File.ReadAllBytes(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), ICONE_FILE));
-                    TEXTURE_BUTTON.LoadImage(bytes);
-                } catch (Exception e) {
-                    Debug.LogError(Utils.DEBUG_PREFIX + e.Message);
-                    TEXTURE_BUTTON.SetPixel(0, 0, Color.blue);
-                    TEXTURE_BUTTON.Apply();
-                }
-            }
-
-            _mainButton = ApplicationLauncher.Instance.AddModApplication(
-                                () => {_displayWindow = true;}, () => {_displayWindow = false;},
-                                null, null, null, null,
-                                ApplicationLauncher.AppScenes.FLIGHT, TEXTURE_BUTTON);
-
-            _eventUI = new EventUI(eventUiPos);
-            _conditionUI = new ConditionUI(conditionUiPos);
-            _actionUI = new ActionUI(actionUiPos);
-            _timerUI = new TimerUI(timerConfUiPos, timerDispUiPos);
-            _popupUI = new PopupUI(Utils.MAIN_WINDOW_ID_POP);
-            _modaleInput = new ModaleInput();
-            _vesselTriggers = null;
+            _displayMultiConf = displayMultiConf;
         }
         
-        public void Start()
+        protected override bool _isDisplayed()
         {
-            Vessel vessel = FlightGlobals.ActiveVessel;
-            foreach (VesselModule module in vessel.vesselModules)
-            {
-                if (module is VesselTriggers)
-                {
-                    _vesselTriggers = (VesselTriggers) module;
-                    _vesselTriggers.LoadPersistentData();
-                    _eventUI.VesselTriggers = _vesselTriggers;
-                    _conditionUI.VesselTriggers = _vesselTriggers;
-                    _actionUI.VesselTriggers = _vesselTriggers;
-                    _timerUI.VesselTriggers = _vesselTriggers;
-                    break;
-                }
-            }
+            return true;
         }
         
-        public void OnDestroy()
+        protected override void _doWindow()
         {
-            ApplicationLauncher.Instance.RemoveModApplication(_mainButton);
-
-            ConfigNode addonConfig = new ConfigNode("KspTrigger");
-            ConfigNode windowConfig = addonConfig.AddNode(KEY_WINDOW_NODE);
-            windowConfig.SetValue(KEY_TRIGGER_UI_POS, _windowRect.position, true);
-            windowConfig.SetValue(KEY_EVENT_UI_POS, _eventUI.Position, true);
-            windowConfig.SetValue(KEY_CONDITION_UI_POS, _conditionUI.Position, true);
-            windowConfig.SetValue(KEY_ACTION_UI_POS, _actionUI.Position, true);
-            windowConfig.SetValue(KEY_TIMER_CONF_UI_POS, _timerUI.PositionConf, true);
-            windowConfig.SetValue(KEY_TIMER_DISP_UI_POS, _timerUI.PositionDisp, true);
-            windowConfig.SetValue(KEY_MULTI_CONF_DISP, _displayMultiConf, true);
-
-            try {
-                Directory.CreateDirectory(_configFileDir);
-                addonConfig.Save(_configFile);
-            } catch (Exception e) {
-                Debug.LogError(Utils.DEBUG_PREFIX + e.Message);
-            }
-        }
-        
-        public void OnGUI()
-        {
-            if (_vesselTriggers == null) return;
-            
-            if (_displayWindow)
-            {
-                if (!_displayMultiConf)
-                {
-                    _windowRect.width = _mainWidth;
-                }
-                else
-                {
-                    _windowRect.width = _mainWidth+_multiConfWidth;
-                }
-                _windowRect = GUI.Window(Utils.MAIN_WINDOW_ID, _windowRect, DoWindow, "Configure Trigger");
-                _popupUI.Display();
-                _eventUI.Display();
-                _conditionUI.Display();
-                _actionUI.Display();
-                _timerUI.Display();
-                
-                _modaleInput.Display(Utils.MAIN_WINDOW_ID+40,_windowRect);
-            }
-            _timerUI.DisplayTimers();
-        }
-        
-        public void DoWindow(int windowID)
-        {
-            Utils.InitGui();
-            
-            if (Event.current.isMouse && (Event.current.button == 0) && (Event.current.type == EventType.MouseUp))
-            {
-                _popupUI.CloseAll();
-            }
-            
             float nameWidth = 80.0f;
             float buttonWidthT = Math.Max(GUI.skin.button.CalcSize(new GUIContent("Event")).x, 
                                  Math.Max(GUI.skin.button.CalcSize(new GUIContent("Condition")).x,
@@ -373,7 +223,7 @@ namespace KspTrigger
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("New", GUILayout.Width(80.0f)))
                 {
-                    _modaleInput.Show("New configuration name",NewConfig);
+                    ModalDialog.ModalInput(_windowRect,"New configuration name",NewConfig);
                 }
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
@@ -383,7 +233,7 @@ namespace KspTrigger
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Rename", GUILayout.Width(80.0f)))
                 {
-                    _modaleInput.Show("New configuration name",RenameConfig,_vesselTriggers.CurrentName);
+                    ModalDialog.ModalInput(_windowRect,"New configuration name",RenameConfig,_vesselTriggers.CurrentName);
                 }
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
@@ -403,7 +253,7 @@ namespace KspTrigger
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Import", GUILayout.Width(80.0f)))
                 {
-                    // TODO
+                    ModalDialog.ModalCombo(_windowRect,"Configuration file name",ImportConfig, _vesselTriggers.ImportableList);
                 }
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
@@ -413,7 +263,7 @@ namespace KspTrigger
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Export", GUILayout.Width(80.0f)))
                 {
-                    // TODO
+                    ModalDialog.ModalInput(_windowRect,"Configuration file name",ExportConfig,_vesselTriggers.CurrentName);
                 }
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
@@ -427,27 +277,9 @@ namespace KspTrigger
                 }
             }
             
-            GUI.DragWindow(new Rect(0, 0, 10000, 10000));
-            
-            // Tooltip
-            if ((GUI.tooltip != "") && (Event.current.type == EventType.Repaint))
-            {
-                GUIContent content = new GUIContent(GUI.tooltip);
-                GUI.Label(new Rect(Event.current.mousePosition, GUI.skin.box.CalcSize(content)), content);
-            }
-            
             if (toggleMultiConf)
             {
                 _displayMultiConf = !_displayMultiConf;
-            }
-        }
-        
-        public void Update()
-        {
-            if (_vesselTriggers != null)
-            {
-                // Called every frame
-                _vesselTriggers.Update();
             }
         }
         
@@ -459,7 +291,21 @@ namespace KspTrigger
         public void RenameConfig(string name)
         {
             _vesselTriggers.RenameCurrent(name);
-        }          
+        }
+        
+        public void ImportConfig(string name)
+        {
+            _vesselTriggers.ImportConfig(name);
+        }
+        
+        public void ExportConfig(string name)
+        {
+            bool result = _vesselTriggers.ExportConfig(name, false);
+            if (!result)
+            {
+                ModalDialog.ModalQuestion(_windowRect,"Configuration \""+name+"\" already exists. Erase ?",() => {_vesselTriggers.ExportConfig(name, true);});
+            }
+        }
     }
 }
 
